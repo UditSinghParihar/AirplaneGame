@@ -1,6 +1,12 @@
 import pygame
 import random
-
+from PIL import Image
+import matplotlib.pyplot as plt
+import numpy as np
+from torchvision import transforms, models
+from torch import nn
+import torch
+from sys import exit
 
 from pygame.locals import (
 	RLEACCEL,
@@ -58,6 +64,7 @@ class Enemy(pygame.sprite.Sprite):
 			)
 		)
 		self.speed = random.randint(14, 24)
+		# self.speed = random.randint(10, 15)
 
 	def update(self):
 		self.rect.move_ip(-self.speed, 0)
@@ -111,6 +118,46 @@ def saveImg(screen, pressed_keys):
 
 
 
+def getModel2(device, numClasses):
+	model = models.resnet18(pretrained=True)
+
+	cnt = 0
+	for child in model.children():		
+		cnt = cnt + 1
+		if(cnt < 8):
+			for param in child.parameters():
+				param.requires_grad = False
+	
+	model.fc = nn.Sequential(nn.Linear(512, 256), 
+		nn.ReLU(),
+		nn.Dropout(0.2),
+		nn.Linear(256, numClasses),
+		nn.LogSoftmax(dim=1))
+
+	model.to(device)
+
+	return model
+
+
+def predictImage(img, model, device):
+	testTransform = transforms.Compose([
+		transforms.Resize([224, 224]), 
+		# transforms.RandomHorizontalFlip(),
+		# transforms.RandomResizedCrop(224),
+		transforms.ToTensor(),
+		transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
+
+	model.eval()
+	with torch.no_grad():
+		imgTensor = testTransform(img)
+		imgTensor = imgTensor.unsqueeze_(0)
+		imgTensor = imgTensor.to(device)	
+		predict = model(imgTensor)
+		index = predict.data.cpu().numpy().argmax()
+
+	return index, torch.exp(predict).data.cpu().numpy().squeeze()
+
+
 if __name__ == '__main__':
 	SCREEN_WIDTH = 1600
 	SCREEN_HEIGHT = 1000
@@ -121,6 +168,14 @@ if __name__ == '__main__':
 	downCnt = 0
 	nothingCnt = 0
 
+	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+	weightName = "checkpoints/air.pth"
+	classNames = ['down', 'nothing', 'up']
+
+	model = getModel2(device, len(classNames))
+	model.load_state_dict(torch.load(weightName))
+	print("Model loaded Successfully.")
+
 	pygame.init()
 
 	clock = pygame.time.Clock()
@@ -129,6 +184,7 @@ if __name__ == '__main__':
 
 	ADDENEMY = pygame.USEREVENT + 1
 	pygame.time.set_timer(ADDENEMY, 500)
+	# pygame.time.set_timer(ADDENEMY, 2000)
 	ADDCLOUD = pygame.USEREVENT + 2
 	pygame.time.set_timer(ADDCLOUD, 1000)
 
@@ -156,10 +212,6 @@ if __name__ == '__main__':
 				clouds.add(new_cloud)
 				all_sprites.add(new_cloud)
 
-		pressed_keys = pygame.key.get_pressed()
-		player.update(pressed_keys)
-		enemies.update()
-		clouds.update()
 
 		screen.fill((135, 206, 250))
 
@@ -175,6 +227,33 @@ if __name__ == '__main__':
 
 		# saveImg(screen, pressed_keys)
 
+		pilStringImage = pygame.image.tostring(screen, "RGB", False)
+		pilImage = Image.frombytes("RGB", (SCREEN_WIDTH, SCREEN_HEIGHT), pilStringImage)
+
+		# plt.imshow(np.asarray(pilImage))
+		# plt.show(block=False)
+		# plt.pause(0.000001)
+		# plt.clf()
+
+		index, probs = predictImage(pilImage, model, device)
+		# print(classNames[index], np.max(probs))
+		action = classNames[index]
+
+		pressed_keys = pygame.key.get_pressed()
+
+		pressed_keys_list = list(pressed_keys)		
+
+		if(action == "down"):
+			pressed_keys_list[K_DOWN] = 1
+		
+		elif(action == "up"):
+			pressed_keys_list[K_UP] = 1
+
+		pressed_keys = tuple(pressed_keys_list)
+
+		player.update(pressed_keys)
+		enemies.update()
+		clouds.update()
 
 		if(pygame.sprite.spritecollideany(player, enemies)):
 			player.kill()
