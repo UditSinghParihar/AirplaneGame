@@ -169,7 +169,7 @@ if __name__ == '__main__':
 	nothingCnt = 0
 
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-	weightName = "checkpoints/air.pth"
+	weightName = "best.pth"
 	classNames = ['down', 'nothing', 'up']
 
 	model = getModel2(device, len(classNames))

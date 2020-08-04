@@ -82,32 +82,15 @@ def showSampleData(trainloader, classNames):
 	imshow(out, title=[classNames[x] for x in labels])
 
 
-# def getModel(device, numClasses):
-# 	model = models.resnet50(pretrained=True)
-
-# 	for param in model.parameters():
-# 		param.requires_grad = False
-
-# 	model.fc = nn.Sequential(nn.Linear(2048, 512), 
-# 		nn.ReLU(),
-# 		nn.Dropout(0.2),
-# 		nn.Linear(512, numClasses),
-# 		nn.LogSoftmax(dim=1))
-
-# 	model.to(device)
-
-# 	return model
-
-
 def getModel2(device, numClasses):
 	model = models.resnet18(pretrained=True)
 
-	cnt = 0
-	for child in model.children():		
-		cnt = cnt + 1
-		if(cnt < 8):
-			for param in child.parameters():
-				param.requires_grad = False
+	# cnt = 0
+	# for child in model.children():		
+	# 	cnt = cnt + 1
+	# 	if(cnt < 8):
+	# 		for param in child.parameters():
+	# 			param.requires_grad = False
 	
 	model.fc = nn.Sequential(nn.Linear(512, 256), 
 		nn.ReLU(),
@@ -119,20 +102,6 @@ def getModel2(device, numClasses):
 
 
 	return model
-
-
-# def getModel3(device, numClasses):
-# 	model = models.resnet18(pretrained=True)
-
-# 	# for param in model.parameters():
-# 	# 	param.requires_grad = False
-
-# 	model.fc = nn.Sequential(nn.Linear(512, numClasses), 
-# 		nn.LogSoftmax(dim=1))
-
-# 	model.to(device)
-
-# 	return model
 
 
 def getOptimParam(model):
@@ -167,6 +136,16 @@ def evaluate(model, device, testloader, criterion):
 	return testLoss, testAcc
 
 
+def saveLosses(trainLosses, testLosses):
+	xAxis = range(1, len(trainLosses) + 1)
+	
+	plt.plot(xAxis, trainLosses, label="Train Loss")
+	plt.plot(xAxis, testLosses, label="Test Loss")
+	plt.legend()
+	plt.savefig("losses.png")
+	plt.clf()
+
+
 def train(model, device, optimizer, criterion, trainloader, testloader, weightName, epochs):
 	miniBatch = 0
 	runningLoss = 0.0
@@ -193,6 +172,7 @@ def train(model, device, optimizer, criterion, trainloader, testloader, weightNa
 				trainLoss = runningLoss/printMiniBatch 
 				trainLosses.append(trainLoss)
 				testLosses.append(testLoss)
+				saveLosses(trainLosses, testLosses)
 
 				print("Epoch: {}/{}, Minibatch: {}/{}, Train Loss: {:.4f}, Test Loss: {:.4f}, Test Accuracy: {:.4f}"
 					.format(
@@ -213,6 +193,10 @@ def train(model, device, optimizer, criterion, trainloader, testloader, weightNa
 					bestWts = copy.deepcopy(model.state_dict())
 					torch.save(bestWts, weightName)
 
+		epochWeight = "checkpoints/exp2/epoch{}.pth".format(epoch+1)
+		bestWts = copy.deepcopy(model.state_dict())
+		torch.save(bestWts, epochWeight)
+
 		scheduler.step()
 	endTime = time.time()
 
@@ -220,6 +204,7 @@ def train(model, device, optimizer, criterion, trainloader, testloader, weightNa
 	
 	model.load_state_dict(bestWts)
 	# torch.save(bestWts, weightName)
+
 
 	return model
 
@@ -246,7 +231,7 @@ def predictImage(img, model, device):
 
 
 def evalImages(dataDir, model, device, classNames):
-	classFolder = classNames[2]
+	classFolder = classNames[0]
 	imgFiles = os.listdir(dataDir+classFolder)
 
 	correctCount = 0
@@ -277,10 +262,9 @@ if __name__ == '__main__':
 	dataDir, argTrain = argv[1], int(argv[2])
 
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-	# weightName = "air.pth"
-	weightName = "checkpoints/air_epoch8.pth"
+	weightName = "best.pth"
 	miniBatchSize = 32
-	epochs = 20
+	epochs = 10
 	numClasses = 3
 
 	trainloader, testloader, classNames = loadTrainTest(dataDir, miniBatchSize)
