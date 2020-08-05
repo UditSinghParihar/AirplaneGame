@@ -193,7 +193,7 @@ def train(model, device, optimizer, criterion, trainloader, testloader, weightNa
 					bestWts = copy.deepcopy(model.state_dict())
 					torch.save(bestWts, weightName)
 
-		epochWeight = "checkpoints/exp2/epoch{}.pth".format(epoch+1)
+		epochWeight = "checkpoints/exp3/epoch{}.pth".format(epoch+1)
 		bestWts = copy.deepcopy(model.state_dict())
 		torch.save(bestWts, epochWeight)
 
@@ -272,6 +272,7 @@ if __name__ == '__main__':
 	showSampleData(trainloader, classNames)
 
 	model = getModel2(device, numClasses)
+	model.load_state_dict(torch.load(weightName))
 	totalParams = sum(p.numel() for p in model.parameters())
 	trainParams = sum(p.numel() for p in model.parameters() if p.requires_grad)
 	print("Total parameters: {} | Trainable parameters: {}".format(totalParams, trainParams))

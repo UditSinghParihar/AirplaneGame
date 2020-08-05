@@ -7,6 +7,7 @@ from torchvision import transforms, models
 from torch import nn
 import torch
 from sys import exit
+import os
 
 from pygame.locals import (
 	RLEACCEL,
@@ -24,11 +25,11 @@ from pygame.locals import (
 class Player(pygame.sprite.Sprite):
 	def __init__(self):
 		super(Player, self).__init__()
-		# self.surf = pygame.Surface((75, 25))
-		# self.surf.fill((255, 255, 255))
 		self.surf = pygame.image.load("asset/airplane6.png").convert()
 		self.surf.set_colorkey((255, 255, 255), RLEACCEL)
-		self.rect = self.surf.get_rect()
+		self.rect = self.surf.get_rect(
+			center = (160, random.randint(0, SCREEN_HEIGHT))
+		)
 
 	def update(self, pressed_keys):
 		if pressed_keys[K_UP]:
@@ -53,8 +54,6 @@ class Player(pygame.sprite.Sprite):
 class Enemy(pygame.sprite.Sprite):
 	def __init__(self):
 		super(Enemy, self).__init__()
-		# self.surf = pygame.Surface((20, 10))
-		# self.surf.fill((255, 255, 255))
 		self.surf = pygame.image.load("asset/missile4.png").convert()
 		self.surf.set_colorkey((255, 255, 255), RLEACCEL)
 		self.rect = self.surf.get_rect(
@@ -121,12 +120,12 @@ def saveImg(screen, pressed_keys):
 def getModel2(device, numClasses):
 	model = models.resnet18(pretrained=True)
 
-	cnt = 0
-	for child in model.children():		
-		cnt = cnt + 1
-		if(cnt < 8):
-			for param in child.parameters():
-				param.requires_grad = False
+	# cnt = 0
+	# for child in model.children():		
+	# 	cnt = cnt + 1
+	# 	if(cnt < 8):
+	# 		for param in child.parameters():
+	# 			param.requires_grad = False
 	
 	model.fc = nn.Sequential(nn.Linear(512, 256), 
 		nn.ReLU(),
@@ -161,6 +160,8 @@ def predictImage(img, model, device):
 if __name__ == '__main__':
 	SCREEN_WIDTH = 1600
 	SCREEN_HEIGHT = 1000
+
+	os.environ['SDL_VIDEO_WINDOW_POS'] = '200,0'
 
 	running = True
 	step = 0
