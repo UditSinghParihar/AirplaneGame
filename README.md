@@ -12,7 +12,7 @@
 	1. Install manually: `torch`, `torchvision`, `PIL`, `matplotlib`, `pygame`   
 	2. Or install using `requirements.txt`: `pip install -r requirements.txt`  
 3. Download weights (45MB) from google drive:  
-	1. `wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1YBNf3AFq4ifgx_vGlmeXRr4m9EpyZ1CL' -O best.pth`  
+	1. `wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=12NAkJhcvHIi1phbPOrNtSx7lPFdGoSbH' -O best.pth`  
 4. Launch game:  
 	1. `python planeGame.py`  
 

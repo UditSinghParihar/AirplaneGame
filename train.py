@@ -16,8 +16,6 @@ import time
 def getTransform():
 	customTransform = transforms.Compose([
 						transforms.Resize([224, 224]),
-						# transforms.RandomHorizontalFlip(),
-						# transforms.RandomResizedCrop(224),
 						transforms.ToTensor(),
 						transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
 
@@ -25,20 +23,6 @@ def getTransform():
 
 
 def loadTrainTest(dataDir, miniBatchSize=4, validSize=0.2):
-	# trainTransform = transforms.Compose([
-	# 	transforms.Resize([224, 224]),
-	# 	# transforms.RandomHorizontalFlip(),
-	# 	# transforms.RandomResizedCrop(224),
-	# 	transforms.ToTensor(),
-	# 	transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
-	
-	# testTransform = transforms.Compose([
-	# 	transforms.Resize([224, 224]),
-	# 	# transforms.RandomHorizontalFlip(),
-	# 	# transforms.RandomResizedCrop(224), 
-	# 	transforms.ToTensor(),
-	# 	transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
-
 	trainTransform = getTransform()
 	testTransform = getTransform()
 
@@ -106,7 +90,6 @@ def getModel2(device, numClasses):
 
 def getOptimParam(model):
 	criterion = nn.NLLLoss()
-	# optimizer = optim.Adam(model.fc.parameters(), lr=0.003)
 	optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.003)
 	expLrScheduler = optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
 
@@ -193,7 +176,7 @@ def train(model, device, optimizer, criterion, trainloader, testloader, weightNa
 					bestWts = copy.deepcopy(model.state_dict())
 					torch.save(bestWts, weightName)
 
-		epochWeight = "checkpoints/exp3/epoch{}.pth".format(epoch+1)
+		epochWeight = "checkpoints/exp4/epoch{}.pth".format(epoch+1)
 		bestWts = copy.deepcopy(model.state_dict())
 		torch.save(bestWts, epochWeight)
 
@@ -210,13 +193,6 @@ def train(model, device, optimizer, criterion, trainloader, testloader, weightNa
 
 
 def predictImage(img, model, device):
-	# testTransform = transforms.Compose([
-	# 	transforms.Resize([224, 224]), 
-	# 	# transforms.RandomHorizontalFlip(),
-	# 	# transforms.RandomResizedCrop(224),
-	# 	transforms.ToTensor(),
-	# 	transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
-
 	testTransform = getTransform()
 
 	model.eval()

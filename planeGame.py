@@ -95,37 +95,31 @@ def saveImg(screen, pressed_keys):
 	global downCnt
 	global nothingCnt
 
-	if(pressed_keys[K_UP] == True):
-		pygame.image.save(screen, "data/up/frameC{:06d}.jpg".format(step))
-		# print("frame{:06d}.jpg".format(step))
-		upCnt = upCnt + 1
+	if(step % 4 == 0):
+		if(pressed_keys[K_UP] == True):
+			pygame.image.save(screen, "data3/up/frameN{:06d}.jpg".format(step))
+			# print("frame{:06d}.jpg".format(step))
+			upCnt = upCnt + 1
 
-	elif(pressed_keys[K_DOWN] == True):
-		pygame.image.save(screen, "data/down/frameC{:06d}.jpg".format(step))
-		# print("frame{:06d}.jpg".format(step))
-		downCnt = downCnt + 1
+		elif(pressed_keys[K_DOWN] == True):
+			pygame.image.save(screen, "data3/down/frameN{:06d}.jpg".format(step))
+			# print("frame{:06d}.jpg".format(step))
+			downCnt = downCnt + 1
 
-	else:
-		pygame.image.save(screen, "data/nothing/frameC{:06d}.jpg".format(step))
-		# print("frame{:06d}.jpg".format(step))
-		nothingCnt = nothingCnt + 1
+		else:
+			pygame.image.save(screen, "data3/nothing/frameN{:06d}.jpg".format(step))
+			# print("frame{:06d}.jpg".format(step))
+			nothingCnt = nothingCnt + 1
 
 	step = step + 1
 
 	if(step % 500 == 0):
-		print("Up count: {}. Down count: {}. Nothing count: {}".format(upCnt, downCnt, nothingCnt))
+		print("U: {}. D: {}. N: {}".format(upCnt, downCnt, nothingCnt))
 
 
 
-def getModel2(device, numClasses):
+def getModel(device, numClasses):
 	model = models.resnet18(pretrained=True)
-
-	# cnt = 0
-	# for child in model.children():		
-	# 	cnt = cnt + 1
-	# 	if(cnt < 8):
-	# 		for param in child.parameters():
-	# 			param.requires_grad = False
 	
 	model.fc = nn.Sequential(nn.Linear(512, 256), 
 		nn.ReLU(),
@@ -141,8 +135,6 @@ def getModel2(device, numClasses):
 def predictImage(img, model, device):
 	testTransform = transforms.Compose([
 		transforms.Resize([224, 224]), 
-		# transforms.RandomHorizontalFlip(),
-		# transforms.RandomResizedCrop(224),
 		transforms.ToTensor(),
 		transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
 
@@ -157,11 +149,31 @@ def predictImage(img, model, device):
 	return index, torch.exp(predict).data.cpu().numpy().squeeze()
 
 
+def takeAction(screen, pressed_keys,  model, device, classNames):
+	pilStringImage = pygame.image.tostring(screen, "RGB", False)
+	pilImage = Image.frombytes("RGB", (SCREEN_WIDTH, SCREEN_HEIGHT), pilStringImage)
+
+	index, probs = predictImage(pilImage, model, device)
+	action = classNames[index]
+
+	pressed_keys_list = list(pressed_keys)		
+
+	if(action == "down"):
+		pressed_keys_list[K_DOWN] = 1
+	
+	elif(action == "up"):
+		pressed_keys_list[K_UP] = 1
+
+	pressed_keys = tuple(pressed_keys_list)
+
+	return pressed_keys
+
+
 if __name__ == '__main__':
 	SCREEN_WIDTH = 1600
 	SCREEN_HEIGHT = 1000
 
-	os.environ['SDL_VIDEO_WINDOW_POS'] = '200,0'
+	os.environ['SDL_VIDEO_WINDOW_POS'] = '50,0'
 
 	running = True
 	step = 0
@@ -170,10 +182,10 @@ if __name__ == '__main__':
 	nothingCnt = 0
 
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-	weightName = "best.pth"
+	weightName = "checkpoints/exp4/epoch9.pth"
 	classNames = ['down', 'nothing', 'up']
 
-	model = getModel2(device, len(classNames))
+	model = getModel(device, len(classNames))
 	model.load_state_dict(torch.load(weightName))
 	print("Model loaded Successfully.")
 
@@ -185,7 +197,6 @@ if __name__ == '__main__':
 
 	ADDENEMY = pygame.USEREVENT + 1
 	pygame.time.set_timer(ADDENEMY, 500)
-	# pygame.time.set_timer(ADDENEMY, 2000)
 	ADDCLOUD = pygame.USEREVENT + 2
 	pygame.time.set_timer(ADDCLOUD, 1000)
 
@@ -225,32 +236,10 @@ if __name__ == '__main__':
 				screen.blit(entity.surf, entity.rect)
 
 		screen.blit(player.surf, player.rect)
-
-		# saveImg(screen, pressed_keys)
-
-		pilStringImage = pygame.image.tostring(screen, "RGB", False)
-		pilImage = Image.frombytes("RGB", (SCREEN_WIDTH, SCREEN_HEIGHT), pilStringImage)
-
-		# plt.imshow(np.asarray(pilImage))
-		# plt.show(block=False)
-		# plt.pause(0.000001)
-		# plt.clf()
-
-		index, probs = predictImage(pilImage, model, device)
-		# print(classNames[index], np.max(probs))
-		action = classNames[index]
-
 		pressed_keys = pygame.key.get_pressed()
 
-		pressed_keys_list = list(pressed_keys)		
-
-		if(action == "down"):
-			pressed_keys_list[K_DOWN] = 1
-		
-		elif(action == "up"):
-			pressed_keys_list[K_UP] = 1
-
-		pressed_keys = tuple(pressed_keys_list)
+		# saveImg(screen, pressed_keys)
+		pressed_keys = takeAction(screen, pressed_keys,  model, device, classNames)
 
 		player.update(pressed_keys)
 		enemies.update()
@@ -262,4 +251,5 @@ if __name__ == '__main__':
 
 		pygame.display.flip()
 
-		clock.tick(30)
+		clock.tick(33)
+		# print(clock.get_fps())

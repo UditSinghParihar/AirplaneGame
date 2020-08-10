@@ -1,5 +1,7 @@
 checkpoints/
 data/
 data2/
+data3/
+data4/
 air.pth
 best.pth
